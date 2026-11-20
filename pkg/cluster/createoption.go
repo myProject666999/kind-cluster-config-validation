@@ -39,7 +39,7 @@ func (c createOptionAdapter) apply(o *internalcreate.ClusterOptions) error {
 func CreateWithConfigFile(path string) CreateOption {
 	return createOptionAdapter(func(o *internalcreate.ClusterOptions) error {
 		var err error
-		o.Config, err = internalencoding.Load(path)
+		o.Config, o.Provenance, err = internalencoding.LoadWithProvenance(path)
 		return err
 	})
 }
@@ -48,7 +48,7 @@ func CreateWithConfigFile(path string) CreateOption {
 func CreateWithRawConfig(raw []byte) CreateOption {
 	return createOptionAdapter(func(o *internalcreate.ClusterOptions) error {
 		var err error
-		o.Config, err = internalencoding.Parse(raw)
+		o.Config, o.Provenance, err = internalencoding.ParseWithProvenance(raw)
 		return err
 	})
 }

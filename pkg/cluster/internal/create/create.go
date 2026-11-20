@@ -53,6 +53,10 @@ const (
 type ClusterOptions struct {
 	Config       *config.Cluster
 	NameOverride string // overrides config.Name
+	// Provenance records which fields were physically present in the source
+	// configuration. It may be nil for configurations constructed in memory;
+	// diagnostics then report an unknown origin.
+	Provenance *config.Provenance
 	// NodeImage overrides the nodes' images in Config if non-zero
 	NodeImage      string
 	Retain         bool
@@ -87,8 +91,14 @@ func Cluster(logger log.Logger, p providers.Provider, opts *ClusterOptions) erro
 		logger.Warnf("cluster name %q is probably too long, this might not work properly on some systems", opts.Config.Name)
 	}
 
-	// then validate
-	if err := opts.Config.Validate(); err != nil {
+	// then validate: surface non-blocking warnings in the logs (so they stay
+	// searchable in CI) and abort on the aggregated hard errors, before any
+	// container runtime is invoked
+	validationResult := config.ValidateCluster(opts.Config, opts.Provenance)
+	for _, warning := range validationResult.Warnings() {
+		logger.Warnf("warning: %s: %s", warning.Field, warning.Message)
+	}
+	if err := validationResult.HardErrorsAggregate(); err != nil {
 		return err
 	}
 
